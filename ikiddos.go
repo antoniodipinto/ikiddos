@@ -98,12 +98,6 @@ func (a *Attack) Report() *Report {
 	return a.report
 }
 
-func isValidUrl(attackURL string) bool {
-	u, err := url.Parse(attackURL)
-
-	return err == nil && len(u.Host) > 0
-}
-
 func (a *Attack) Start() {
 	go func() {
 		for i := 0; i < a.config.Clients; i++ {
@@ -116,6 +110,16 @@ func (a *Attack) Start() {
 		fmt.Println("attack stopped")
 	}()
 }
+
+func (a *Attack) Pause() {
+	a.enabled = false
+}
+
+func (a *Attack) Stop() {
+	a.stop = true
+}
+
+// Private section
 
 func (a *Attack) attackLoop() {
 	for {
@@ -154,13 +158,10 @@ func (a *Attack) getHttpClient() (resp *http.Response, err error) {
 	}
 
 	return client.Post(a.config.Url, "", a.config.Body)
-
 }
 
-func (a *Attack) Pause() {
-	a.enabled = false
-}
+func isValidUrl(attackURL string) bool {
+	u, err := url.Parse(attackURL)
 
-func (a *Attack) Stop() {
-	a.stop = true
+	return err == nil && len(u.Host) > 0
 }
