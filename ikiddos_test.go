@@ -10,7 +10,7 @@ func TestAttack_SetConfig(t *testing.T) {
 	attack := ikiddos.New()
 
 	err := attack.SetConfig(&ikiddos.Config{
-		Url:            "https://keeksist.com",
+		Url:            "http://localhost",
 		Duration:       time.Second * 20,
 		Proxy:          nil,
 		ConsoleEnabled: false,
@@ -30,7 +30,7 @@ func TestAttack_Start(t *testing.T) {
 	attack := ikiddos.New()
 
 	err := attack.SetConfig(&ikiddos.Config{
-		Url:            "https://keeksist.com",
+		Url:            "http://localhost",
 		Duration:       time.Second * 20,
 		Proxy:          nil,
 		ConsoleEnabled: false,
