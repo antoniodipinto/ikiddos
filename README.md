@@ -6,11 +6,54 @@ A Go library for HTTP load testing. **For educational purposes only.**
 
 ## Installation
 
+### As a library
+
 ```bash
 go get github.com/antoniodipinto/ikiddos
 ```
 
-## Usage
+### As a CLI
+
+```bash
+go install github.com/antoniodipinto/ikiddos/cmd/ikiddos@latest
+```
+
+## CLI Usage
+
+```bash
+ikiddos -url http://example.com -duration 1m -clients 20
+```
+
+```bash
+ikiddos -url http://example.com/api -method POST -content-type application/json -body '{"key":"value"}'
+```
+
+With custom headers:
+
+```bash
+ikiddos -url http://example.com/subscribe \
+  -method POST \
+  -content-type application/x-www-form-urlencoded \
+  -body 'email=test@example.com&mc_language=it&subscribed=1' \
+  -header 'User-Agent: Mozilla/5.0' \
+  -header 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' \
+  -header 'Accept-Language: it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7'
+```
+
+| Flag            | Default | Description                                        |
+|-----------------|---------|----------------------------------------------------|
+| `-url`          | —       | Target URL (required)                              |
+| `-duration`     | `30s`   | Attack duration (e.g. `30s`, `1m`)                 |
+| `-timeout`      | `5s`    | Per-request timeout                                |
+| `-clients`      | `10`    | Number of concurrent workers                       |
+| `-method`       | `GET`   | HTTP method: `GET` or `POST`                       |
+| `-content-type` | —       | Content-Type header (required for POST)            |
+| `-body`         | —       | Request body (POST only)                           |
+| `-header`       | —       | Custom header as `Key: Value` (repeatable)         |
+
+The CLI prints a live counter of requests, successes, and errors, and outputs a final report when finished. Press `Ctrl+C` to stop early.
+
+## Library Usage
 
 ### GET request
 
@@ -64,6 +107,25 @@ err := attack.SetConfig(&ikiddos.Config{
 })
 ```
 
+### Custom headers
+
+```go
+err := attack.SetConfig(&ikiddos.Config{
+	Url:         "http://example.com/subscribe",
+	Duration:    30 * time.Second,
+	Timeout:     5 * time.Second,
+	Clients:     10,
+	Method:      ikiddos.HttpPost,
+	ContentType: "application/x-www-form-urlencoded",
+	Body:        []byte("email=test@example.com&mc_language=it&subscribed=1"),
+	Headers: map[string]string{
+		"User-Agent":      "Mozilla/5.0",
+		"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		"Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+	},
+})
+```
+
 ## Configuration
 
 | Field            | Type            | Description                                      |
@@ -75,6 +137,7 @@ err := attack.SetConfig(&ikiddos.Config{
 | `Method`         | `string`        | `ikiddos.HttpGet` or `ikiddos.HttpPost`           |
 | `ContentType`    | `string`        | Required for POST requests                        |
 | `Body`           | `[]byte`        | Request body (POST only)                          |
+| `Headers`        | `map[string]string` | Custom HTTP headers                           |
 | `Proxy`          | `*ProxyConfig`  | Optional proxy (`Address` + `Port`)               |
 | `ConsoleEnabled` | `bool`          | Enable console output (default `true`)            |
 

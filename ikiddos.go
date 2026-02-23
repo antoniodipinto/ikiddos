@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -30,6 +32,7 @@ type Config struct {
 	Method         string
 	ContentType    string
 	Body           []byte
+	Headers        map[string]string
 }
 
 type ProxyConfig struct {
@@ -38,10 +41,11 @@ type ProxyConfig struct {
 }
 
 type Report struct {
-	Url      string
-	Requests int64
-	Success  int64
-	Error    int64
+	Url         string
+	Requests    int64
+	Success     int64
+	Error       int64
+	StatusCodes sync.Map
 }
 
 func New() *Attack {
@@ -146,6 +150,10 @@ func (a *Attack) attackLoop() {
 			continue
 		}
 
+		a.incrStatusCode(resp.StatusCode)
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+
 		if resp.StatusCode >= 400 {
 			atomic.AddInt64(&a.report.Error, 1)
 			continue
@@ -159,13 +167,42 @@ func (a *Attack) getHttpClient() (resp *http.Response, err error) {
 	client := http.Client{
 		Timeout: a.config.Timeout,
 	}
-	if a.config.Method == HttpGet {
-		return client.Get(a.config.Url)
+
+	var body *bytes.Reader
+	if a.config.Method == HttpPost {
+		body = bytes.NewReader(a.config.Body)
+	} else {
+		body = bytes.NewReader(nil)
 	}
 
-	body := bytes.NewReader(a.config.Body)
+	req, err := http.NewRequest(a.config.Method, a.config.Url, body)
+	if err != nil {
+		return nil, err
+	}
 
-	return client.Post(a.config.Url, a.config.ContentType, body)
+	if a.config.Method == HttpPost && len(a.config.ContentType) > 0 {
+		req.Header.Set("Content-Type", a.config.ContentType)
+	}
+
+	for k, v := range a.config.Headers {
+		req.Header.Set(k, v)
+	}
+
+	return client.Do(req)
+}
+
+func (a *Attack) incrStatusCode(code int) {
+	val, _ := a.report.StatusCodes.LoadOrStore(code, new(int64))
+	atomic.AddInt64(val.(*int64), 1)
+}
+
+func (r *Report) GetStatusCodes() map[int]int64 {
+	result := make(map[int]int64)
+	r.StatusCodes.Range(func(key, value any) bool {
+		result[key.(int)] = atomic.LoadInt64(value.(*int64))
+		return true
+	})
+	return result
 }
 
 func isValidUrl(attackURL string) bool {
