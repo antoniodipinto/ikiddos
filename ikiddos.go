@@ -1,9 +1,9 @@
 package ikiddos
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"sync/atomic"
@@ -29,7 +29,7 @@ type Config struct {
 	Timeout        time.Duration
 	Method         string
 	ContentType    string
-	Body           io.Reader
+	Body           []byte
 }
 
 type ProxyConfig struct {
@@ -115,11 +115,17 @@ func (a *Attack) Pause() {
 	a.enabled = false
 }
 
+func (a *Attack) IsEnabled() bool {
+	return a.enabled
+}
+
 func (a *Attack) Stop() {
 	a.stop = true
 }
 
-// Private section
+func (a *Attack) IsStopped() bool {
+	return a.stop
+}
 
 func (a *Attack) attackLoop() {
 	for {
@@ -157,7 +163,9 @@ func (a *Attack) getHttpClient() (resp *http.Response, err error) {
 		return client.Get(a.config.Url)
 	}
 
-	return client.Post(a.config.Url, "", a.config.Body)
+	body := bytes.NewReader(a.config.Body)
+
+	return client.Post(a.config.Url, a.config.ContentType, body)
 }
 
 func isValidUrl(attackURL string) bool {
